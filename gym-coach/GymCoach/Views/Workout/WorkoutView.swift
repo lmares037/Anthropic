@@ -7,6 +7,7 @@ struct WorkoutView: View {
     @State private var viewModel = WorkoutViewModel()
     @State private var showAddExercise = false
     @State private var activeLog: WorkoutLog?
+    @State private var editingLog: WorkoutLog?
 
     /// Today's workout log, if one exists
     private var todaysLog: WorkoutLog? {
@@ -38,6 +39,9 @@ struct WorkoutView: View {
                 AddExerciseSheet { exercise in
                     addExerciseToWorkout(exercise)
                 }
+            }
+            .sheet(item: $editingLog) { log in
+                EditWorkoutView(log: log)
             }
         }
     }
@@ -187,30 +191,44 @@ struct WorkoutView: View {
 
     private var recentWorkoutsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
-            Text("RECENT WORKOUTS")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundColor(AppTheme.textTertiary)
-                .tracking(1.5)
+            HStack {
+                Text("RECENT WORKOUTS")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(AppTheme.textTertiary)
+                    .tracking(1.5)
+                Spacer()
+                Text("Tap to edit")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundColor(AppTheme.textTertiary)
+            }
 
             let recentLogs = Array(allLogs.prefix(5))
             ForEach(recentLogs) { log in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(log.date.formatted(date: .abbreviated, time: .omitted))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundColor(AppTheme.textPrimary)
+                Button {
+                    editingLog = log
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(log.date.formatted(date: .abbreviated, time: .omitted))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundColor(AppTheme.textPrimary)
 
-                        Text("\(log.entries.count) exercises")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundColor(AppTheme.textSecondary)
+                            Text("\(log.entries.count) exercises")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+
+                        Spacer()
+
+                        let totalSets = log.entries.reduce(0) { $0 + $1.sets }
+                        Text("\(totalSets) sets")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.accent)
+
+                        Image(systemName: "pencil.circle")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.textTertiary)
                     }
-
-                    Spacer()
-
-                    let totalSets = log.entries.reduce(0) { $0 + $1.sets }
-                    Text("\(totalSets) sets")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(AppTheme.accent)
                 }
                 .padding(.vertical, AppTheme.paddingSM)
 

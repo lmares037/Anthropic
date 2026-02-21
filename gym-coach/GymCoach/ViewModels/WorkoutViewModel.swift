@@ -9,9 +9,16 @@ class WorkoutViewModel {
 
     // MARK: - Weekly Effective Sets Calculation
 
+    /// A calendar with Monday as the first day of the week.
+    static var mondayCalendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2 // Monday
+        return cal
+    }
+
     /// Calculates effective sets per muscle group for the current week (Monday-Sunday).
     func weeklyEffectiveSets(from logs: [WorkoutLog]) -> [MuscleGroup: Double] {
-        let calendar = Calendar.current
+        let calendar = Self.mondayCalendar
         let now = Date()
         guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start else {
             return [:]
@@ -66,6 +73,38 @@ class WorkoutViewModel {
         default:
             return "High volume"
         }
+    }
+
+    /// Calculates effective sets per muscle group for a specific week offset (0 = this week, -1 = last week, etc.).
+    func weeklyEffectiveSets(from logs: [WorkoutLog], weekOffset: Int) -> [MuscleGroup: Double] {
+        let calendar = Self.mondayCalendar
+        let now = Date()
+        let targetDate = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: now) ?? now
+        guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: targetDate) else {
+            return [:]
+        }
+
+        let weekLogs = logs.filter { $0.date >= weekInterval.start && $0.date < weekInterval.end }
+        var totals: [MuscleGroup: Double] = [:]
+
+        for log in weekLogs {
+            for entry in log.entries {
+                guard let exercise = entry.exercise else { continue }
+                for activation in exercise.allMuscleActivations {
+                    let effective = activation.effectiveSets(for: entry.sets)
+                    totals[activation.muscle, default: 0] += effective
+                }
+            }
+        }
+
+        return totals
+    }
+
+    /// Returns the Monday-Sunday week interval for a given offset from the current week.
+    func weekInterval(offset: Int) -> DateInterval? {
+        let calendar = Self.mondayCalendar
+        let targetDate = calendar.date(byAdding: .weekOfYear, value: offset, to: Date()) ?? Date()
+        return calendar.dateInterval(of: .weekOfYear, for: targetDate)
     }
 
     // MARK: - Workout Creation

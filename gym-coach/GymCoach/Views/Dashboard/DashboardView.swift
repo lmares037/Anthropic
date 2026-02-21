@@ -2,7 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct DashboardView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutLog.date, order: .reverse) private var allLogs: [WorkoutLog]
+    @Query private var allExercises: [Exercise]
     @State private var viewModel = WorkoutViewModel()
 
     private var weeklyTotals: [MuscleGroup: Double] {
@@ -15,6 +17,14 @@ struct DashboardView: View {
                 VStack(spacing: AppTheme.paddingLG) {
                     headerSection
                     weekSummaryCard
+                    RestTimerView()
+                    ProgressChartsView(allLogs: allLogs, viewModel: viewModel)
+                    WeekendRecommendationsView(
+                        weeklyTotals: weeklyTotals,
+                        allExercises: allExercises
+                    ) { exercise in
+                        addExerciseFromRecommendation(exercise)
+                    }
                     muscleGroupGrid
                 }
                 .padding(.horizontal, AppTheme.paddingMD)
@@ -131,7 +141,19 @@ struct DashboardView: View {
     }
 
     private func isThisWeek(_ date: Date) -> Bool {
-        Calendar.current.isDate(date, equalTo: .now, toGranularity: .weekOfYear)
+        let calendar = WorkoutViewModel.mondayCalendar
+        return calendar.isDate(date, equalTo: .now, toGranularity: .weekOfYear)
+    }
+
+    /// Adds a recommended exercise to today's workout (creates one if needed).
+    private func addExerciseFromRecommendation(_ exercise: Exercise) {
+        let todaysLog = allLogs.first { Calendar.current.isDateInToday($0.date) }
+        if let log = todaysLog {
+            viewModel.addEntry(to: log, exercise: exercise, context: modelContext)
+        } else {
+            let log = viewModel.createWorkout(context: modelContext)
+            viewModel.addEntry(to: log, exercise: exercise, context: modelContext)
+        }
     }
 }
 
