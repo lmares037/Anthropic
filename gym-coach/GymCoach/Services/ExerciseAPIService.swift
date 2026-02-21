@@ -1,8 +1,10 @@
 import Foundation
 
 /// Service for looking up exercise muscle data from the ExerciseDB API (RapidAPI).
-/// Used when users add custom exercises to auto-detect targeted muscles.
-/// Supports both v1 and v2 API response formats.
+///
+/// **API-saving strategy:** On first use, fetches ALL ~1300 exercises in a single API call
+/// and caches them locally as a JSON file. All subsequent searches are performed against the
+/// local cache with zero API calls. The cache can be refreshed manually if needed.
 actor ExerciseAPIService {
     static let shared = ExerciseAPIService()
 
@@ -13,6 +15,12 @@ actor ExerciseAPIService {
     private let apiKey = "f008b2770cmshc05c8f700bba8a3p1abac2jsn42ad21555926"
     private let baseURL = "https://exercisedb.p.rapidapi.com"
     private let host = "exercisedb.p.rapidapi.com"
+
+    /// In-memory cache of all exercises (loaded from disk or API)
+    private var cachedExercises: [ExerciseResult] = []
+
+    /// Whether the cache has been loaded this session
+    private var cacheLoaded = false
 
     // MARK: - API Models
 
@@ -54,14 +62,57 @@ actor ExerciseAPIService {
         }
     }
 
-    // MARK: - Search
+    // MARK: - Local Cache
 
-    /// Search for exercises by name and return matching results.
-    func searchExercise(name: String) async throws -> [ExerciseResult] {
-        let query = name.lowercased()
-            .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+    private var cacheFileURL: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return docs.appendingPathComponent("exercisedb_cache.json")
+    }
 
-        guard let url = URL(string: "\(baseURL)/exercises/name/\(query)?limit=15&offset=0") else {
+    /// Loads cached exercises from disk into memory.
+    private func loadCacheFromDisk() -> [ExerciseResult]? {
+        guard FileManager.default.fileExists(atPath: cacheFileURL.path) else { return nil }
+        guard let data = try? Data(contentsOf: cacheFileURL) else { return nil }
+        return try? JSONDecoder().decode([ExerciseResult].self, from: data)
+    }
+
+    /// Saves exercises to disk cache.
+    private func saveCacheToDisk(_ exercises: [ExerciseResult]) {
+        guard let data = try? JSONEncoder().encode(exercises) else { return }
+        try? data.write(to: cacheFileURL)
+    }
+
+    /// Returns the number of cached exercises, or nil if no cache exists.
+    var cacheCount: Int? {
+        if !cachedExercises.isEmpty { return cachedExercises.count }
+        return loadCacheFromDisk()?.count
+    }
+
+    /// Whether a local cache file exists on disk.
+    var hasCacheOnDisk: Bool {
+        FileManager.default.fileExists(atPath: cacheFileURL.path)
+    }
+
+    // MARK: - Ensure Cache
+
+    /// Makes sure exercises are loaded — from disk if available, otherwise fetches from API (1 call).
+    func ensureCache() async throws {
+        if cacheLoaded && !cachedExercises.isEmpty { return }
+
+        // Try disk first
+        if let diskCache = loadCacheFromDisk(), !diskCache.isEmpty {
+            cachedExercises = diskCache
+            cacheLoaded = true
+            return
+        }
+
+        // No local cache — fetch everything from the API (1 API call)
+        try await refreshCache()
+    }
+
+    /// Fetches ALL exercises from the API and saves to local cache. Costs 1 API call.
+    func refreshCache() async throws {
+        guard let url = URL(string: "\(baseURL)/exercises?limit=1400&offset=0") else {
             throw APIError.invalidURL
         }
 
@@ -69,7 +120,7 @@ actor ExerciseAPIService {
         request.httpMethod = "GET"
         request.setValue(apiKey, forHTTPHeaderField: "x-rapidapi-key")
         request.setValue(host, forHTTPHeaderField: "x-rapidapi-host")
-        request.timeoutInterval = 15
+        request.timeoutInterval = 30 // Larger payload needs more time
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -89,19 +140,56 @@ actor ExerciseAPIService {
             throw APIError.serverError(httpResponse.statusCode, body)
         }
 
-        // Try decoding as array of exercises
-        do {
-            let results = try JSONDecoder().decode([ExerciseResult].self, from: data)
-            return results
-        } catch {
-            // The API might wrap results in an object — try alternate formats
-            // Some API versions return { "exercises": [...] } or { "data": [...] }
-            if let wrapper = try? JSONDecoder().decode(WrappedResponse.self, from: data) {
-                return wrapper.exercises ?? wrapper.data ?? []
-            }
+        // Decode — try array first, then wrapped formats
+        var exercises: [ExerciseResult] = []
+
+        if let decoded = try? JSONDecoder().decode([ExerciseResult].self, from: data) {
+            exercises = decoded
+        } else if let wrapper = try? JSONDecoder().decode(WrappedResponse.self, from: data) {
+            exercises = wrapper.exercises ?? wrapper.data ?? []
+        } else {
             let responseString = String(data: data, encoding: .utf8) ?? "binary data"
             throw APIError.decodingError(responseString.prefix(500).description)
         }
+
+        guard !exercises.isEmpty else {
+            throw APIError.decodingError("API returned 0 exercises")
+        }
+
+        cachedExercises = exercises
+        cacheLoaded = true
+        saveCacheToDisk(exercises)
+    }
+
+    // MARK: - Local Search (no API call)
+
+    /// Searches the local cache by keyword. No API call.
+    /// Call `ensureCache()` first to make sure data is loaded.
+    func searchLocal(keyword: String) -> [ExerciseResult] {
+        let query = keyword.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return [] }
+
+        let words = query.split(separator: " ").map(String.init)
+
+        return cachedExercises.filter { exercise in
+            let name = exercise.exerciseName.lowercased()
+            let target = exercise.primaryTarget?.lowercased() ?? ""
+            let bodyPart = (exercise.bodyPart ?? exercise.bodyParts?.first ?? "").lowercased()
+            let equip = (exercise.equipment ?? exercise.equipments?.first ?? "").lowercased()
+            let searchable = "\(name) \(target) \(bodyPart) \(equip)"
+
+            // Every word in the query must match somewhere
+            return words.allSatisfy { searchable.contains($0) }
+        }
+    }
+
+    // MARK: - Legacy search (kept for backward compat but now uses cache)
+
+    /// Search for exercises by name. Uses local cache (0 API calls after initial fetch).
+    func searchExercise(name: String) async throws -> [ExerciseResult] {
+        try await ensureCache()
+        let results = searchLocal(keyword: name)
+        return Array(results.prefix(15))
     }
 
     /// Wrapper for APIs that nest results in an object
@@ -126,8 +214,6 @@ actor ExerciseAPIService {
         case "lats", "latissimus dorsi", "upper back", "traps", "trapezius",
              "rhomboids", "back", "infraspinatus", "teres major",
              "teres minor", "middle back", "lower back":
-            // Note: "lower back" also maps here for cases where the API uses it as a back variant
-            // The dedicated lower back case below handles the specific erector spinae terms
             return .back
 
         // Shoulders

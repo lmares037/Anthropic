@@ -9,9 +9,11 @@ struct AddCustomExerciseView: View {
     @State private var secondaryMuscles: [MuscleGroup: Double] = [:]
     @State private var instructions = ""
     @State private var isLookingUp = false
+    @State private var isDownloadingDB = false
     @State private var apiError: String?
     @State private var searchResults: [ExerciseAPIService.ExerciseResult] = []
     @State private var selectedResultIndex: Int?
+    @State private var cacheReady = false
 
     let onSave: (Exercise) -> Void
 
@@ -139,29 +141,63 @@ struct AddCustomExerciseView: View {
 
     private var apiLookupSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
-            // Search button
-            Button {
-                lookupMuscles()
-            } label: {
-                HStack(spacing: AppTheme.paddingSM) {
-                    if isLookingUp {
-                        ProgressView()
-                            .tint(AppTheme.accentSecondary)
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 14))
+            // Download DB button (shown only if cache isn't ready)
+            if !cacheReady {
+                Button {
+                    downloadDatabase()
+                } label: {
+                    HStack(spacing: AppTheme.paddingSM) {
+                        if isDownloadingDB {
+                            ProgressView()
+                                .tint(AppTheme.accentSecondary)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.down.circle")
+                                .font(.system(size: 14))
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(isDownloadingDB ? "Downloading exercise database..." : "Download Exercise Database")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text("One-time download (uses 1 API call). Enables offline search of 1300+ exercises.")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.textTertiary)
+                        }
+                        Spacer()
                     }
-                    Text(isLookingUp ? "Searching..." : "Search exercises & auto-detect muscles")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    Spacer()
+                    .foregroundColor(AppTheme.accentSecondary)
+                    .padding(AppTheme.paddingSM + 4)
+                    .background(AppTheme.accentSecondary.opacity(0.1))
+                    .cornerRadius(AppTheme.radiusSM)
                 }
-                .foregroundColor(AppTheme.accentSecondary)
-                .padding(AppTheme.paddingSM + 4)
-                .background(AppTheme.accentSecondary.opacity(0.1))
-                .cornerRadius(AppTheme.radiusSM)
+                .disabled(isDownloadingDB)
             }
-            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isLookingUp)
+
+            // Search button (shown once cache is ready)
+            if cacheReady {
+                Button {
+                    lookupMuscles()
+                } label: {
+                    HStack(spacing: AppTheme.paddingSM) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 14))
+                        Text("Search exercises & auto-detect muscles")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        Spacer()
+                        Text("Offline")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.success)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(AppTheme.success.opacity(0.15))
+                            .cornerRadius(4)
+                    }
+                    .foregroundColor(AppTheme.accentSecondary)
+                    .padding(AppTheme.paddingSM + 4)
+                    .background(AppTheme.accentSecondary.opacity(0.1))
+                    .cornerRadius(AppTheme.radiusSM)
+                }
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
 
             if let error = apiError {
                 Text(error)
@@ -173,7 +209,7 @@ struct AddCustomExerciseView: View {
             if !searchResults.isEmpty {
                 VStack(alignment: .leading, spacing: AppTheme.paddingXS) {
                     HStack {
-                        Text("\(searchResults.count) matches found")
+                        Text("\(searchResults.count) matches")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundColor(AppTheme.accentSecondary)
                         Spacer()
@@ -197,6 +233,13 @@ struct AddCustomExerciseView: View {
                     RoundedRectangle(cornerRadius: AppTheme.radiusSM)
                         .stroke(AppTheme.accentSecondary.opacity(0.3), lineWidth: 1)
                 )
+            }
+        }
+        .task {
+            // Check if cache exists on disk already (no API call)
+            let hasCache = await ExerciseAPIService.shared.hasCacheOnDisk
+            if hasCache {
+                cacheReady = true
             }
         }
     }
@@ -476,28 +519,41 @@ struct AddCustomExerciseView: View {
         }
     }
 
-    /// Searches the ExerciseDB API and populates the results list.
-    private func lookupMuscles() {
-        isLookingUp = true
+    /// Downloads the full exercise database (1 API call) and caches locally.
+    private func downloadDatabase() {
+        isDownloadingDB = true
         apiError = nil
-        searchResults = []
-        selectedResultIndex = nil
 
         Task {
             do {
-                let results = try await ExerciseAPIService.shared.searchExercise(name: name)
+                try await ExerciseAPIService.shared.refreshCache()
                 await MainActor.run {
-                    if results.isEmpty {
-                        apiError = "No exercises found for \"\(name)\". Try a different keyword (e.g. \"press\", \"curl\", \"squat\")."
-                    } else {
-                        searchResults = results
-                    }
-                    isLookingUp = false
+                    cacheReady = true
+                    isDownloadingDB = false
                 }
             } catch {
                 await MainActor.run {
                     apiError = error.localizedDescription
-                    isLookingUp = false
+                    isDownloadingDB = false
+                }
+            }
+        }
+    }
+
+    /// Searches the local exercise cache instantly (no API call).
+    private func lookupMuscles() {
+        searchResults = []
+        selectedResultIndex = nil
+        apiError = nil
+
+        Task {
+            let results = await ExerciseAPIService.shared.searchLocal(keyword: name)
+            await MainActor.run {
+                let limited = Array(results.prefix(20))
+                if limited.isEmpty {
+                    apiError = "No exercises found for \"\(name)\". Try a different keyword (e.g. \"press\", \"curl\", \"squat\", \"chest\", \"dumbbell\")."
+                } else {
+                    withAnimation { searchResults = limited }
                 }
             }
         }
