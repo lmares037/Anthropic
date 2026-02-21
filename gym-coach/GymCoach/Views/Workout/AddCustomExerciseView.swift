@@ -10,6 +10,8 @@ struct AddCustomExerciseView: View {
     @State private var instructions = ""
     @State private var isLookingUp = false
     @State private var apiError: String?
+    @State private var searchResults: [ExerciseAPIService.ExerciseResult] = []
+    @State private var selectedResultIndex: Int?
 
     let onSave: (Exercise) -> Void
 
@@ -68,6 +70,13 @@ struct AddCustomExerciseView: View {
                         .stroke(AppTheme.surfaceBorder, lineWidth: 1)
                 )
                 .autocorrectionDisabled()
+                .onChange(of: name) {
+                    // Clear previous results when name changes
+                    if !searchResults.isEmpty {
+                        searchResults = []
+                        selectedResultIndex = nil
+                    }
+                }
         }
     }
 
@@ -130,6 +139,7 @@ struct AddCustomExerciseView: View {
 
     private var apiLookupSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
+            // Search button
             Button {
                 lookupMuscles()
             } label: {
@@ -142,7 +152,7 @@ struct AddCustomExerciseView: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 14))
                     }
-                    Text(isLookingUp ? "Looking up muscles..." : "Auto-detect muscles from name")
+                    Text(isLookingUp ? "Searching..." : "Search exercises & auto-detect muscles")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                     Spacer()
                 }
@@ -158,7 +168,121 @@ struct AddCustomExerciseView: View {
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.danger)
             }
+
+            // Search results list
+            if !searchResults.isEmpty {
+                VStack(alignment: .leading, spacing: AppTheme.paddingXS) {
+                    HStack {
+                        Text("\(searchResults.count) matches found")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(AppTheme.accentSecondary)
+                        Spacer()
+                        Button {
+                            withAnimation { searchResults = []; selectedResultIndex = nil }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppTheme.textTertiary)
+                        }
+                    }
+
+                    ForEach(Array(searchResults.enumerated()), id: \.offset) { index, result in
+                        searchResultRow(result, index: index)
+                    }
+                }
+                .padding(AppTheme.paddingSM)
+                .background(AppTheme.surface)
+                .cornerRadius(AppTheme.radiusSM)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.radiusSM)
+                        .stroke(AppTheme.accentSecondary.opacity(0.3), lineWidth: 1)
+                )
+            }
         }
+    }
+
+    // MARK: - Search Result Row
+
+    private func searchResultRow(_ result: ExerciseAPIService.ExerciseResult, index: Int) -> some View {
+        let isSelected = selectedResultIndex == index
+        let primaryName = result.primaryTarget ?? "—"
+        let secondaryNames = result.allSecondaryMuscles
+
+        return Button {
+            selectResult(result, at: index)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(result.exerciseName.capitalized)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(isSelected ? AppTheme.accentSecondary : AppTheme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    Spacer()
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.accentSecondary)
+                    }
+                }
+
+                // Target + equipment
+                HStack(spacing: 6) {
+                    if let equip = result.equipment {
+                        Label(equip.capitalized, systemImage: "wrench.and.screwdriver")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(AppTheme.textTertiary)
+                    }
+                    if let bodyPart = result.bodyPart ?? result.bodyParts?.first {
+                        Label(bodyPart.capitalized, systemImage: "figure.run")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(AppTheme.textTertiary)
+                    }
+                }
+
+                // Muscle tags
+                HStack(spacing: 4) {
+                    if let mapped = ExerciseAPIService.mapToMuscleGroup(primaryName) {
+                        musclePill(mapped.displayName, color: mapped.color, isPrimary: true)
+                    } else {
+                        musclePill(primaryName.capitalized, color: AppTheme.accent, isPrimary: true)
+                    }
+
+                    ForEach(secondaryNames.prefix(3), id: \.self) { sec in
+                        if let mapped = ExerciseAPIService.mapToMuscleGroup(sec) {
+                            musclePill(mapped.displayName, color: mapped.color, isPrimary: false)
+                        }
+                    }
+
+                    if secondaryNames.count > 3 {
+                        Text("+\(secondaryNames.count - 3)")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.textTertiary)
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+            .background(isSelected ? AppTheme.accentSecondary.opacity(0.08) : Color.clear)
+            .cornerRadius(6)
+        }
+    }
+
+    private func musclePill(_ text: String, color: Color, isPrimary: Bool) -> some View {
+        HStack(spacing: 3) {
+            Circle()
+                .fill(color)
+                .frame(width: 5, height: 5)
+            Text(text)
+                .font(.system(size: 9, weight: isPrimary ? .bold : .medium, design: .rounded))
+                .foregroundColor(isPrimary ? color : AppTheme.textSecondary)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color.opacity(isPrimary ? 0.15 : 0.08))
+        .cornerRadius(4)
     }
 
     // MARK: - Primary Muscles
@@ -318,42 +442,57 @@ struct AddCustomExerciseView: View {
         dismiss()
     }
 
-    /// Calls the ExerciseDB API to auto-detect muscles from exercise name.
+    /// Applies a selected API result to the form fields.
+    private func selectResult(_ result: ExerciseAPIService.ExerciseResult, at index: Int) {
+        let impact = UIImpactFeedbackGenerator(style: .light)
+        impact.impactOccurred()
+
+        withAnimation(.spring(response: 0.3)) {
+            selectedResultIndex = index
+
+            // Fill name from the result
+            name = result.exerciseName.capitalized
+
+            // Map primary target
+            primaryMuscles.removeAll()
+            if let targetName = result.primaryTarget,
+               let primary = ExerciseAPIService.mapToMuscleGroup(targetName) {
+                primaryMuscles.insert(primary)
+            }
+
+            // Map secondary muscles
+            secondaryMuscles.removeAll()
+            for secondary in result.allSecondaryMuscles {
+                if let muscle = ExerciseAPIService.mapToMuscleGroup(secondary),
+                   !primaryMuscles.contains(muscle) {
+                    secondaryMuscles[muscle] = 0.5
+                }
+            }
+
+            // Pre-fill instructions if available and field is empty
+            if let instr = result.instructions, !instr.isEmpty {
+                instructions = instr.joined(separator: "\n")
+            }
+        }
+    }
+
+    /// Searches the ExerciseDB API and populates the results list.
     private func lookupMuscles() {
         isLookingUp = true
         apiError = nil
+        searchResults = []
+        selectedResultIndex = nil
 
         Task {
             do {
                 let results = try await ExerciseAPIService.shared.searchExercise(name: name)
-                if let match = results.first {
-                    await MainActor.run {
-                        // Map primary target (handles both v1 `target` and v2 `targetMuscles`)
-                        if let targetName = match.primaryTarget,
-                           let primary = ExerciseAPIService.mapToMuscleGroup(targetName) {
-                            primaryMuscles.insert(primary)
-                        }
-
-                        // Map secondary muscles
-                        for secondary in match.allSecondaryMuscles {
-                            if let muscle = ExerciseAPIService.mapToMuscleGroup(secondary),
-                               !primaryMuscles.contains(muscle) {
-                                secondaryMuscles[muscle] = 0.5
-                            }
-                        }
-
-                        // If we found instructions, pre-fill them
-                        if let instr = match.instructions, !instr.isEmpty, instructions.isEmpty {
-                            instructions = instr.joined(separator: "\n")
-                        }
-
-                        isLookingUp = false
+                await MainActor.run {
+                    if results.isEmpty {
+                        apiError = "No exercises found for \"\(name)\". Try a different keyword (e.g. \"press\", \"curl\", \"squat\")."
+                    } else {
+                        searchResults = results
                     }
-                } else {
-                    await MainActor.run {
-                        apiError = "No matching exercise found. Select muscles manually."
-                        isLookingUp = false
-                    }
+                    isLookingUp = false
                 }
             } catch {
                 await MainActor.run {

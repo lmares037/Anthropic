@@ -61,7 +61,7 @@ actor ExerciseAPIService {
         let query = name.lowercased()
             .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
 
-        guard let url = URL(string: "\(baseURL)/exercises/name/\(query)?limit=5&offset=0") else {
+        guard let url = URL(string: "\(baseURL)/exercises/name/\(query)?limit=15&offset=0") else {
             throw APIError.invalidURL
         }
 
