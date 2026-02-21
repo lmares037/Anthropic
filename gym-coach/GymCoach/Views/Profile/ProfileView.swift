@@ -13,6 +13,8 @@ struct ProfileView: View {
     @AppStorage("userAge") private var userAge = 33
 
     @State private var showEditProfile = false
+    @State private var iconExported = false
+    @State private var iconShareURL: URL?
 
     var body: some View {
         NavigationStack {
@@ -22,6 +24,7 @@ struct ProfileView: View {
                     statsGrid
                     bodyCompSection
                     allTimeStats
+                    exportIconSection
                 }
                 .padding(.horizontal, AppTheme.paddingMD)
                 .padding(.bottom, AppTheme.paddingXL)
@@ -30,7 +33,65 @@ struct ProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(isPresented: Binding(
+                get: { iconShareURL != nil },
+                set: { if !$0 { iconShareURL = nil } }
+            )) {
+                if let url = iconShareURL {
+                    ShareSheet(activityItems: [url])
+                }
+            }
         }
+    }
+
+    // MARK: - Export Icon
+
+    private var exportIconSection: some View {
+        VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
+            Text("APP ICON")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.textTertiary)
+                .tracking(1.5)
+
+            // Icon preview
+            HStack(spacing: AppTheme.paddingMD) {
+                AppIconView(size: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Gym Coach Icon")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("Export the generated icon to set as your app icon in Xcode")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.textTertiary)
+                }
+
+                Spacer()
+            }
+
+            Button {
+                Task {
+                    if let url = await IconExporter.forceExport() {
+                        iconShareURL = url
+                        iconExported = true
+                    }
+                }
+            } label: {
+                HStack(spacing: AppTheme.paddingSM) {
+                    Image(systemName: iconExported ? "checkmark.circle.fill" : "square.and.arrow.up")
+                        .font(.system(size: 14))
+                    Text(iconExported ? "Exported — Tap to Share Again" : "Export App Icon (1024x1024)")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(AppTheme.accent.opacity(0.1))
+                .cornerRadius(AppTheme.radiusSM)
+            }
+        }
+        .cardStyle()
     }
 
     // MARK: - Profile Header
@@ -233,4 +294,16 @@ struct AllTimeStatRow: View {
         .background(AppTheme.surfaceElevated.opacity(0.5))
         .cornerRadius(AppTheme.radiusSM)
     }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

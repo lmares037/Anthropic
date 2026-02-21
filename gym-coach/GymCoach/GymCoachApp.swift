@@ -7,6 +7,9 @@ struct GymCoachApp: App {
         WindowGroup {
             MainTabView()
                 .preferredColorScheme(.dark)
+                .task {
+                    await IconExporter.exportIfNeeded()
+                }
         }
         .modelContainer(for: [
             Exercise.self,

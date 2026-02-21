@@ -328,16 +328,25 @@ struct AddCustomExerciseView: View {
                 let results = try await ExerciseAPIService.shared.searchExercise(name: name)
                 if let match = results.first {
                     await MainActor.run {
-                        // Map API results to our muscle groups
-                        if let primary = ExerciseAPIService.mapToMuscleGroup(match.target) {
+                        // Map primary target (handles both v1 `target` and v2 `targetMuscles`)
+                        if let targetName = match.primaryTarget,
+                           let primary = ExerciseAPIService.mapToMuscleGroup(targetName) {
                             primaryMuscles.insert(primary)
                         }
-                        for secondary in match.secondaryMuscles {
+
+                        // Map secondary muscles
+                        for secondary in match.allSecondaryMuscles {
                             if let muscle = ExerciseAPIService.mapToMuscleGroup(secondary),
                                !primaryMuscles.contains(muscle) {
                                 secondaryMuscles[muscle] = 0.5
                             }
                         }
+
+                        // If we found instructions, pre-fill them
+                        if let instr = match.instructions, !instr.isEmpty, instructions.isEmpty {
+                            instructions = instr.joined(separator: "\n")
+                        }
+
                         isLookingUp = false
                     }
                 } else {
@@ -348,7 +357,7 @@ struct AddCustomExerciseView: View {
                 }
             } catch {
                 await MainActor.run {
-                    apiError = "Lookup failed: \(error.localizedDescription)"
+                    apiError = error.localizedDescription
                     isLookingUp = false
                 }
             }

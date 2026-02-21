@@ -2,6 +2,7 @@ import Foundation
 
 /// Service for looking up exercise muscle data from the ExerciseDB API (RapidAPI).
 /// Used when users add custom exercises to auto-detect targeted muscles.
+/// Supports both v1 and v2 API response formats.
 actor ExerciseAPIService {
     static let shared = ExerciseAPIService()
 
@@ -15,14 +16,42 @@ actor ExerciseAPIService {
 
     // MARK: - API Models
 
+    /// Unified exercise result that handles both v1 and v2 response formats.
     struct ExerciseResult: Codable {
-        let id: String
-        let name: String
-        let target: String
-        let bodyPart: String
-        let equipment: String
-        let secondaryMuscles: [String]
-        let instructions: [String]
+        // v1 fields
+        let id: String?
+        let name: String?
+        let target: String?
+        let bodyPart: String?
+        let equipment: String?
+        let secondaryMuscles: [String]?
+        let instructions: [String]?
+
+        // v2 fields (ExerciseDB API may return these instead)
+        let exerciseId: String?
+        let targetMuscles: [String]?
+        let bodyParts: [String]?
+        let equipments: [String]?
+
+        /// The primary target muscle (handles both v1 single string and v2 array)
+        var primaryTarget: String? {
+            target ?? targetMuscles?.first
+        }
+
+        /// All secondary muscles (handles both formats)
+        var allSecondaryMuscles: [String] {
+            secondaryMuscles ?? []
+        }
+
+        /// Exercise name from either format
+        var exerciseName: String {
+            name ?? "Unknown"
+        }
+
+        /// Exercise ID from either format
+        var exerciseID: String {
+            id ?? exerciseId ?? ""
+        }
     }
 
     // MARK: - Search
@@ -30,9 +59,9 @@ actor ExerciseAPIService {
     /// Search for exercises by name and return matching results.
     func searchExercise(name: String) async throws -> [ExerciseResult] {
         let query = name.lowercased()
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+            .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
 
-        guard let url = URL(string: "\(baseURL)/exercises/name/\(query)?limit=5") else {
+        guard let url = URL(string: "\(baseURL)/exercises/name/\(query)?limit=5&offset=0") else {
             throw APIError.invalidURL
         }
 
@@ -40,7 +69,7 @@ actor ExerciseAPIService {
         request.httpMethod = "GET"
         request.setValue(apiKey, forHTTPHeaderField: "x-rapidapi-key")
         request.setValue(host, forHTTPHeaderField: "x-rapidapi-host")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 15
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -48,14 +77,37 @@ actor ExerciseAPIService {
             throw APIError.invalidResponse
         }
 
-        guard httpResponse.statusCode == 200 else {
-            if httpResponse.statusCode == 403 {
-                throw APIError.invalidAPIKey
-            }
-            throw APIError.serverError(httpResponse.statusCode)
+        switch httpResponse.statusCode {
+        case 200:
+            break
+        case 401, 403:
+            throw APIError.invalidAPIKey
+        case 429:
+            throw APIError.rateLimited
+        default:
+            let body = String(data: data, encoding: .utf8) ?? "No response body"
+            throw APIError.serverError(httpResponse.statusCode, body)
         }
 
-        return try JSONDecoder().decode([ExerciseResult].self, from: data)
+        // Try decoding as array of exercises
+        do {
+            let results = try JSONDecoder().decode([ExerciseResult].self, from: data)
+            return results
+        } catch {
+            // The API might wrap results in an object — try alternate formats
+            // Some API versions return { "exercises": [...] } or { "data": [...] }
+            if let wrapper = try? JSONDecoder().decode(WrappedResponse.self, from: data) {
+                return wrapper.exercises ?? wrapper.data ?? []
+            }
+            let responseString = String(data: data, encoding: .utf8) ?? "binary data"
+            throw APIError.decodingError(responseString.prefix(500).description)
+        }
+    }
+
+    /// Wrapper for APIs that nest results in an object
+    private struct WrappedResponse: Codable {
+        let exercises: [ExerciseResult]?
+        let data: [ExerciseResult]?
     }
 
     // MARK: - Muscle Mapping
@@ -66,18 +118,23 @@ actor ExerciseAPIService {
 
         switch name {
         // Chest
-        case "pectorals", "chest":
+        case "pectorals", "chest", "pectoralis major sternal head",
+             "pectoralis major clavicular head":
             return .chest
 
         // Back
         case "lats", "latissimus dorsi", "upper back", "traps", "trapezius",
-             "rhomboids", "back":
+             "rhomboids", "back", "infraspinatus", "teres major",
+             "teres minor", "middle back", "lower back":
+            // Note: "lower back" also maps here for cases where the API uses it as a back variant
+            // The dedicated lower back case below handles the specific erector spinae terms
             return .back
 
         // Shoulders
         case "delts", "deltoids", "anterior deltoids", "lateral deltoids",
              "posterior deltoids", "shoulders", "serratus anterior",
-             "levator scapulae":
+             "levator scapulae", "front deltoids", "rear deltoids",
+             "rotator cuff":
             return .shoulders
 
         // Biceps
@@ -90,26 +147,27 @@ actor ExerciseAPIService {
 
         // Forearms
         case "forearms", "wrist flexors", "wrist extensors",
-             "brachioradialis":
+             "brachioradialis", "grip":
             return .forearms
 
         // Core
         case "abs", "abdominals", "rectus abdominis", "obliques",
-             "transverse abdominis":
+             "transverse abdominis", "core":
             return .abdominals
 
         // Lower Back
-        case "spine", "erector spinae", "lower back", "spinal erectors":
+        case "spine", "erector spinae", "spinal erectors",
+             "lower back erectors":
             return .lowerBack
 
         // Glutes
         case "glutes", "gluteus maximus", "gluteus medius",
-             "gluteus minimus":
+             "gluteus minimus", "gluteals":
             return .glutes
 
         // Quads
         case "quads", "quadriceps", "vastus lateralis", "vastus medialis",
-             "rectus femoris":
+             "rectus femoris", "vastus intermedius":
             return .quadriceps
 
         // Hamstrings
@@ -123,7 +181,7 @@ actor ExerciseAPIService {
 
         // Adductors/Abductors
         case "adductors", "abductors", "hip flexors", "tensor fasciae latae",
-             "hip adductors", "hip abductors":
+             "hip adductors", "hip abductors", "inner thighs", "outer thighs":
             return .adductorsAbductors
 
         default:
@@ -138,8 +196,9 @@ enum APIError: LocalizedError {
     case invalidURL
     case invalidResponse
     case invalidAPIKey
-    case serverError(Int)
-    case decodingError
+    case rateLimited
+    case serverError(Int, String)
+    case decodingError(String)
 
     var errorDescription: String? {
         switch self {
@@ -148,11 +207,13 @@ enum APIError: LocalizedError {
         case .invalidResponse:
             return "Invalid response from server"
         case .invalidAPIKey:
-            return "Invalid API key. Add your RapidAPI key in ExerciseAPIService.swift"
-        case .serverError(let code):
-            return "Server error (code \(code))"
-        case .decodingError:
-            return "Failed to parse response"
+            return "Invalid or expired API key. Check your RapidAPI key in ExerciseAPIService.swift and ensure you're subscribed to the ExerciseDB API."
+        case .rateLimited:
+            return "Rate limit exceeded. Wait a moment and try again."
+        case .serverError(let code, let body):
+            return "Server error (\(code)): \(body.prefix(200))"
+        case .decodingError(let raw):
+            return "Unexpected response format: \(raw.prefix(200))"
         }
     }
 }
