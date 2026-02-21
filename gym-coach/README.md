@@ -59,21 +59,11 @@ GymCoach/
     └── AppTheme.swift             # Colors, spacing, typography, card modifiers
 ```
 
-## Setup (3 commands)
+## Setup
 
-```bash
-# 1. Install XcodeGen (one-time)
-brew install xcodegen
-
-# 2. Generate the Xcode project
-cd gym-coach
-xcodegen
-
-# 3. Open and run
-open GymCoach.xcodeproj
-```
-
-That's it — select a simulator and hit **Cmd+R**.
+1. Clone the repo
+2. Open `GymCoach.xcodeproj` in Xcode 15+
+3. Select a simulator and hit **Cmd+R**
 
 ### Optional: ExerciseDB API
 
