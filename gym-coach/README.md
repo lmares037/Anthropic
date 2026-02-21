@@ -59,12 +59,29 @@ GymCoach/
     └── AppTheme.swift             # Colors, spacing, typography, card modifiers
 ```
 
-## Setup
+## Setup (3 commands)
 
-1. Open project in Xcode 15+
-2. Set deployment target to iOS 17.0
-3. (Optional) Add your RapidAPI key in `ExerciseAPIService.swift` for exercise muscle auto-detection
-4. Build and run
+```bash
+# 1. Install XcodeGen (one-time)
+brew install xcodegen
+
+# 2. Generate the Xcode project
+cd gym-coach
+xcodegen
+
+# 3. Open and run
+open GymCoach.xcodeproj
+```
+
+That's it — select a simulator and hit **Cmd+R**.
+
+### Optional: ExerciseDB API
+
+To enable auto-detection of muscles when adding custom exercises:
+
+1. Sign up at [RapidAPI](https://rapidapi.com/justin-WFnsXH_t6/api/exercisedb) (free tier)
+2. Copy your API key
+3. Paste it in `GymCoach/Services/ExerciseAPIService.swift` replacing `YOUR_RAPIDAPI_KEY`
 
 ## License
 
