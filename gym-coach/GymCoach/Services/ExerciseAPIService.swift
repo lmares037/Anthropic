@@ -9,7 +9,7 @@ actor ExerciseAPIService {
 
     /// Users should replace this with their own RapidAPI key.
     /// Get one free at: https://rapidapi.com/justin-WFnsXH_t6/api/exercisedb
-    private let apiKey = "YOUR_RAPIDAPI_KEY"
+    private let apiKey = "f008b2770cmshc05c8f700bba8a3p1abac2jsn42ad21556b5c"
     private let baseURL = "https://exercisedb.p.rapidapi.com"
     private let host = "exercisedb.p.rapidapi.com"
 
