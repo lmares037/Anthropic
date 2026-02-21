@@ -26,6 +26,12 @@
 		AA0011000000000000000011 /* ExerciseAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0011000000000000000011; };
 		AA0012000000000000000012 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0012000000000000000012; };
 		AA0013000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AF0013000000000000000013; };
+		AA0015000000000000000015 /* RestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0015000000000000000015; };
+		AA0016000000000000000016 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0016000000000000000016; };
+		AA0017000000000000000017 /* ProgressChartsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0017000000000000000017; };
+		AA0018000000000000000018 /* WeekendRecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0018000000000000000018; };
+		AA0019000000000000000019 /* EditWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0019000000000000000019; };
+		AA001A00000000000000001A /* IconExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF001A00000000000000001A; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +55,12 @@
 		AF0012000000000000000012 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		AF0013000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AF0014000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AF0015000000000000000015 /* RestTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerView.swift; sourceTree = "<group>"; };
+		AF0016000000000000000016 /* AppIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconView.swift; sourceTree = "<group>"; };
+		AF0017000000000000000017 /* ProgressChartsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressChartsView.swift; sourceTree = "<group>"; };
+		AF0018000000000000000018 /* WeekendRecommendationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekendRecommendationsView.swift; sourceTree = "<group>"; };
+		AF0019000000000000000019 /* EditWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditWorkoutView.swift; sourceTree = "<group>"; };
+		AF001A00000000000000001A /* IconExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconExporter.swift; sourceTree = "<group>"; };
 		AD0001000000000000000001 /* GymCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -79,6 +91,7 @@
 				AC0005000000000000000005 /* ViewModels */,
 				AC0004000000000000000004 /* Views */,
 				AC0006000000000000000006 /* Services */,
+				AC000F00000000000000000F /* Utilities */,
 				AC0007000000000000000007 /* Theme */,
 				AC000D00000000000000000D /* Assets */,
 				AF0014000000000000000014 /* Info.plist */,
@@ -138,6 +151,8 @@
 			isa = PBXGroup;
 			children = (
 				AF0008000000000000000008 /* DashboardView.swift */,
+				AF0017000000000000000017 /* ProgressChartsView.swift */,
+				AF0018000000000000000018 /* WeekendRecommendationsView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -148,6 +163,7 @@
 				AF0009000000000000000009 /* WorkoutView.swift */,
 				AF000A00000000000000000A /* AddExerciseSheet.swift */,
 				AF000B00000000000000000B /* AddCustomExerciseView.swift */,
+				AF0019000000000000000019 /* EditWorkoutView.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -174,6 +190,8 @@
 				AF000E00000000000000000E /* ProgressRing.swift */,
 				AF000F00000000000000000F /* SetCounter.swift */,
 				AF0010000000000000000010 /* MuscleTagView.swift */,
+				AF0015000000000000000015 /* RestTimerView.swift */,
+				AF0016000000000000000016 /* AppIconView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -184,6 +202,14 @@
 				AF0013000000000000000013 /* Assets.xcassets */,
 			);
 			path = Assets;
+			sourceTree = "<group>";
+		};
+		AC000F00000000000000000F /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				AF001A00000000000000001A /* IconExporter.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		AC000E00000000000000000E /* Products */ = {
@@ -281,6 +307,12 @@
 				AA0010000000000000000010 /* MuscleTagView.swift in Sources */,
 				AA0011000000000000000011 /* ExerciseAPIService.swift in Sources */,
 				AA0012000000000000000012 /* AppTheme.swift in Sources */,
+				AA0015000000000000000015 /* RestTimerView.swift in Sources */,
+				AA0016000000000000000016 /* AppIconView.swift in Sources */,
+				AA0017000000000000000017 /* ProgressChartsView.swift in Sources */,
+				AA0018000000000000000018 /* WeekendRecommendationsView.swift in Sources */,
+				AA0019000000000000000019 /* EditWorkoutView.swift in Sources */,
+				AA001A00000000000000001A /* IconExporter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
