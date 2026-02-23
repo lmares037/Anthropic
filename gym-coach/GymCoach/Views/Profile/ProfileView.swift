@@ -24,6 +24,7 @@ struct ProfileView: View {
                     statsGrid
                     bodyCompSection
                     allTimeStats
+                    healthKitSection
                     exportIconSection
                 }
                 .padding(.horizontal, AppTheme.paddingMD)
@@ -42,6 +43,79 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Apple Health
+
+    private var healthKitSection: some View {
+        @Environment(HealthKitImportService.self) var healthKit
+
+        return VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
+            Text("APPLE HEALTH")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(AppTheme.textTertiary)
+                .tracking(1.5)
+
+            HStack(spacing: AppTheme.paddingMD) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.red)
+                    .frame(width: 44, height: 44)
+                    .background(Color.red.opacity(0.12))
+                    .cornerRadius(10)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Import Workouts")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("Auto-imports walking, running, and boxing from Apple Health to track their muscle contribution")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.textTertiary)
+                }
+
+                Spacer()
+            }
+
+            Button {
+                Task { await healthKit.importNewWorkouts() }
+            } label: {
+                HStack(spacing: AppTheme.paddingSM) {
+                    if healthKit.isImporting {
+                        ProgressView()
+                            .tint(AppTheme.accent)
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                    }
+                    Text(healthKit.isImporting ? "Importing..." : "Sync Now")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(AppTheme.accent.opacity(0.1))
+                .cornerRadius(AppTheme.radiusSM)
+            }
+            .disabled(healthKit.isImporting)
+
+            HStack {
+                if let lastSync = healthKit.lastImportDate {
+                    Text("Last synced: \(lastSync.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.textTertiary)
+                }
+
+                Spacer()
+
+                if healthKit.importedCount > 0 {
+                    Text("\(healthKit.importedCount) new workouts imported")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(AppTheme.success)
+                }
+            }
+        }
+        .cardStyle()
     }
 
     // MARK: - Export Icon

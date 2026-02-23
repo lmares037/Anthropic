@@ -3,15 +3,16 @@ import SwiftData
 
 @main
 struct GymCoachApp: App {
-    @StateObject private var watchSync = WatchSyncService.shared
+    @State private var healthKitService = HealthKitImportService.shared
 
     var body: some Scene {
         WindowGroup {
             MainTabView()
                 .preferredColorScheme(.dark)
-                .environmentObject(watchSync)
+                .environment(healthKitService)
                 .task {
                     await IconExporter.exportIfNeeded()
+                    await healthKitService.importNewWorkouts()
                 }
         }
         .modelContainer(for: [
@@ -21,7 +22,7 @@ struct GymCoachApp: App {
             CardioEntry.self
         ]) { result in
             if case .success(let container) = result {
-                WatchSyncService.shared.configure(with: container)
+                HealthKitImportService.shared.configure(with: container)
             }
         }
     }

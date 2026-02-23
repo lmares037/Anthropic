@@ -202,15 +202,18 @@ enum CardioActivityType: String, Codable, CaseIterable, Identifiable {
 /// | Intensity| 0.2   | 0.4    | 0.6    | 0.8   | 1.0    |
 enum CardioIntensity {
 
-    /// Estimated max heart rate (using 220 - age, default age 25)
-    static let estimatedMaxHR: Double = 195.0
+    /// Default estimated max heart rate (220 - 25 = 195).
+    /// Use `calculate(... maxHR:)` to pass the user's actual value (220 - age).
+    static let defaultMaxHR: Double = 195.0
 
     /// Calculate intensity for an activity given available metrics.
+    /// - Parameter maxHR: Estimated max heart rate (220 - age). Defaults to 195 if not provided.
     static func calculate(
         activity: CardioActivityType,
         durationSeconds: Double,
         distanceMeters: Double?,
-        avgHeartRate: Double?
+        avgHeartRate: Double?,
+        maxHR: Double? = nil
     ) -> Double {
         switch activity {
         case .walking:
@@ -218,7 +221,7 @@ enum CardioIntensity {
         case .running:
             return runningIntensity(durationSeconds: durationSeconds, distanceMeters: distanceMeters)
         case .boxing:
-            return boxingIntensity(durationSeconds: durationSeconds, avgHeartRate: avgHeartRate)
+            return boxingIntensity(durationSeconds: durationSeconds, avgHeartRate: avgHeartRate, maxHR: maxHR ?? defaultMaxHR)
         }
     }
 
@@ -281,9 +284,9 @@ enum CardioIntensity {
     /// - %maxHR > 85% → 0.95 (all-out rounds)
     ///
     /// Without heart rate, falls back to duration-based estimate.
-    static func boxingIntensity(durationSeconds: Double, avgHeartRate: Double?) -> Double {
+    static func boxingIntensity(durationSeconds: Double, avgHeartRate: Double?, maxHR: Double = 195.0) -> Double {
         if let hr = avgHeartRate, hr > 0 {
-            let percentMax = hr / estimatedMaxHR
+            let percentMax = hr / maxHR
             let intensity = mapRange(percentMax, fromLow: 0.5, fromHigh: 0.9, toLow: 0.3, toHigh: 1.0)
             return clamp(intensity, min: 0.2, max: 1.0)
         }

@@ -35,6 +35,11 @@ class WorkoutViewModel {
                     totals[activation.muscle, default: 0] += effective
                 }
             }
+            for cardio in log.cardioEntries {
+                for (muscle, sets) in cardio.effectiveSetsByMuscle {
+                    totals[muscle, default: 0] += sets
+                }
+            }
         }
 
         return totals
@@ -93,6 +98,11 @@ class WorkoutViewModel {
                 for activation in exercise.allMuscleActivations {
                     let effective = activation.effectiveSets(for: entry.sets)
                     totals[activation.muscle, default: 0] += effective
+                }
+            }
+            for cardio in log.cardioEntries {
+                for (muscle, sets) in cardio.effectiveSetsByMuscle {
+                    totals[muscle, default: 0] += sets
                 }
             }
         }

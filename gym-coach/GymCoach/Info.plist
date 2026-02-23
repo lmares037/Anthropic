@@ -42,5 +42,7 @@
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Gym Coach reads your walking, running, and boxing workouts from Apple Health to calculate how cardio contributes to your weekly muscle volume tracking.</string>
 </dict>
 </plist>

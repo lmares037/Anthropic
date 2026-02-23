@@ -423,11 +423,12 @@ struct CardioEntryRow: View {
                 .cornerRadius(6)
             }
 
-            if entry.source == "watch" {
+            if entry.source == "healthkit" {
                 HStack(spacing: 4) {
-                    Image(systemName: "applewatch")
+                    Image(systemName: "heart.fill")
                         .font(.system(size: 9))
-                    Text("From Apple Watch")
+                        .foregroundColor(.red.opacity(0.7))
+                    Text("From Apple Health")
                         .font(.system(size: 9, weight: .medium, design: .rounded))
                 }
                 .foregroundColor(AppTheme.textTertiary)
