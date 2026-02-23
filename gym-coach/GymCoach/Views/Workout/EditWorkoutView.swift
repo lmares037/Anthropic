@@ -1,13 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// Allows editing a workout from a previous day — add/remove exercises, adjust sets.
+/// Allows editing a workout from any day — add/remove exercises & cardio, adjust sets.
 struct EditWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var log: WorkoutLog
     @State private var viewModel = WorkoutViewModel()
     @State private var showAddExercise = false
+    @State private var showAddCardio = false
 
     var body: some View {
         NavigationStack {
@@ -17,7 +18,7 @@ struct EditWorkoutView: View {
                     dateHeader
 
                     // Entries
-                    if log.entries.isEmpty {
+                    if log.entries.isEmpty && log.cardioEntries.isEmpty {
                         emptyState
                     } else {
                         ForEach(log.entries) { entry in
@@ -25,13 +26,20 @@ struct EditWorkoutView: View {
                                 viewModel.removeEntry(entry, from: log, context: modelContext)
                             }
                         }
+
+                        ForEach(log.cardioEntries) { cardio in
+                            CardioEntryRow(entry: cardio) {
+                                log.cardioEntries.removeAll { $0.id == cardio.id }
+                                modelContext.delete(cardio)
+                            }
+                        }
                     }
 
-                    // Add exercise button
-                    addExerciseButton
+                    // Add buttons
+                    addButtons
 
                     // Session summary
-                    if !log.entries.isEmpty {
+                    if !log.entries.isEmpty || !log.cardioEntries.isEmpty {
                         sessionSummary
                     }
                 }
@@ -63,6 +71,12 @@ struct EditWorkoutView: View {
                     viewModel.addEntry(to: log, exercise: exercise, context: modelContext)
                 }
             }
+            .sheet(isPresented: $showAddCardio) {
+                AddCardioSheet { cardioEntry in
+                    modelContext.insert(cardioEntry)
+                    log.cardioEntries.append(cardioEntry)
+                }
+            }
         }
     }
 
@@ -83,16 +97,19 @@ struct EditWorkoutView: View {
             }
 
             HStack {
-                Text("\(log.entries.count) exercises")
+                let totalItems = log.entries.count + log.cardioEntries.count
+                Text("\(totalItems) activities")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(AppTheme.textSecondary)
 
                 Spacer()
 
                 let totalSets = log.entries.reduce(0) { $0 + $1.sets }
-                Text("\(totalSets) total sets")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(AppTheme.accent)
+                if totalSets > 0 {
+                    Text("\(totalSets) total sets")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(AppTheme.accent)
+                }
             }
         }
         .cardStyle()
@@ -105,34 +122,56 @@ struct EditWorkoutView: View {
             Image(systemName: "tray")
                 .font(.system(size: 32))
                 .foregroundColor(AppTheme.textTertiary)
-            Text("No exercises logged")
+            Text("No activities logged")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(AppTheme.textTertiary)
         }
         .padding(.vertical, AppTheme.paddingLG)
     }
 
-    // MARK: - Add Exercise Button
+    // MARK: - Add Buttons
 
-    private var addExerciseButton: some View {
-        Button {
-            showAddExercise = true
-        } label: {
-            HStack(spacing: AppTheme.paddingSM) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 18))
-                Text("Add Exercise")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+    private var addButtons: some View {
+        HStack(spacing: AppTheme.paddingSM) {
+            Button {
+                showAddExercise = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16))
+                    Text("Exercise")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(AppTheme.accent.opacity(0.1))
+                .cornerRadius(AppTheme.radiusMD)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.radiusMD)
+                        .stroke(AppTheme.accent.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [6]))
+                )
             }
-            .foregroundColor(AppTheme.accent)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(AppTheme.accent.opacity(0.1))
-            .cornerRadius(AppTheme.radiusMD)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.radiusMD)
-                    .stroke(AppTheme.accent.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [6]))
-            )
+
+            Button {
+                showAddCardio = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "figure.run")
+                        .font(.system(size: 16))
+                    Text("Cardio")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(AppTheme.accentSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(AppTheme.accentSecondary.opacity(0.1))
+                .cornerRadius(AppTheme.radiusMD)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.radiusMD)
+                        .stroke(AppTheme.accentSecondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [6]))
+                )
+            }
         }
     }
 

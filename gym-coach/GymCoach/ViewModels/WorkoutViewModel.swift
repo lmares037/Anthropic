@@ -116,6 +116,13 @@ class WorkoutViewModel {
         return log
     }
 
+    /// Creates a new workout log for a specific date (for logging past workouts).
+    func createWorkout(forDate date: Date, context: ModelContext) -> WorkoutLog {
+        let log = WorkoutLog(date: date)
+        context.insert(log)
+        return log
+    }
+
     /// Adds an exercise entry to a workout log.
     func addEntry(to log: WorkoutLog, exercise: Exercise, sets: Int = 3, context: ModelContext) {
         let entry = WorkoutEntry(exercise: exercise, sets: sets)

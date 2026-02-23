@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Gym Coach reads your workout data (heart rate, distance, calories) to track your training sessions and calculate intensity.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Gym Coach saves your workout sessions to Apple Health so they appear in your health records.</string>
+	<key>WKApplication</key>
+	<true/>
+	<key>WKCompanionAppBundleIdentifier</key>
+	<string>com.gymcoach.app</string>
+</dict>
+</plist>
