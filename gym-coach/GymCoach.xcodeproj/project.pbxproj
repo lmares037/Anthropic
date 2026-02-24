@@ -32,6 +32,9 @@
 		AA0018000000000000000018 /* WeekendRecommendationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0018000000000000000018; };
 		AA0019000000000000000019 /* EditWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0019000000000000000019; };
 		AA001A00000000000000001A /* IconExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF001A00000000000000001A; };
+		AA001B00000000000000001B /* CardioEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF001B00000000000000001B; };
+		AA001C00000000000000001C /* HealthKitImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF001C00000000000000001C; };
+		AA001D00000000000000001D /* AddCardioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF001D00000000000000001D; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +64,10 @@
 		AF0018000000000000000018 /* WeekendRecommendationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekendRecommendationsView.swift; sourceTree = "<group>"; };
 		AF0019000000000000000019 /* EditWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditWorkoutView.swift; sourceTree = "<group>"; };
 		AF001A00000000000000001A /* IconExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconExporter.swift; sourceTree = "<group>"; };
+		AF001B00000000000000001B /* CardioEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioEntry.swift; sourceTree = "<group>"; };
+		AF001C00000000000000001C /* HealthKitImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportService.swift; sourceTree = "<group>"; };
+		AF001D00000000000000001D /* AddCardioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCardioSheet.swift; sourceTree = "<group>"; };
+		AF001E00000000000000001E /* GymCoach.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GymCoach.entitlements; sourceTree = "<group>"; };
 		AD0001000000000000000001 /* GymCoach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -95,6 +102,7 @@
 				AC0007000000000000000007 /* Theme */,
 				AC000D00000000000000000D /* Assets */,
 				AF0014000000000000000014 /* Info.plist */,
+				AF001E00000000000000001E /* GymCoach.entitlements */,
 			);
 			path = GymCoach;
 			sourceTree = "<group>";
@@ -106,6 +114,7 @@
 				AF0003000000000000000003 /* Exercise.swift */,
 				AF0004000000000000000004 /* WorkoutLog.swift */,
 				AF0005000000000000000005 /* ExerciseLibrary.swift */,
+				AF001B00000000000000001B /* CardioEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -135,6 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				AF0011000000000000000011 /* ExerciseAPIService.swift */,
+				AF001C00000000000000001C /* HealthKitImportService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -164,6 +174,7 @@
 				AF000A00000000000000000A /* AddExerciseSheet.swift */,
 				AF000B00000000000000000B /* AddCustomExerciseView.swift */,
 				AF0019000000000000000019 /* EditWorkoutView.swift */,
+				AF001D00000000000000001D /* AddCardioSheet.swift */,
 			);
 			path = Workout;
 			sourceTree = "<group>";
@@ -313,6 +324,9 @@
 				AA0018000000000000000018 /* WeekendRecommendationsView.swift in Sources */,
 				AA0019000000000000000019 /* EditWorkoutView.swift in Sources */,
 				AA001A00000000000000001A /* IconExporter.swift in Sources */,
+				AA001B00000000000000001B /* CardioEntry.swift in Sources */,
+				AA001C00000000000000001C /* HealthKitImportService.swift in Sources */,
+				AA001D00000000000000001D /* AddCardioSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,6 +456,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GymCoach/GymCoach.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -470,6 +485,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GymCoach/GymCoach.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
