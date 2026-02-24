@@ -12,6 +12,8 @@ struct ProfileView: View {
     @AppStorage("userBodyFat") private var userBodyFat = 19.5
     @AppStorage("userAge") private var userAge = 33
 
+    @Environment(HealthKitImportService.self) private var healthKit
+
     @State private var showEditProfile = false
     @State private var iconExported = false
     @State private var iconShareURL: URL?
@@ -48,9 +50,7 @@ struct ProfileView: View {
     // MARK: - Apple Health
 
     private var healthKitSection: some View {
-        @Environment(HealthKitImportService.self) var healthKit
-
-        return VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
+        VStack(alignment: .leading, spacing: AppTheme.paddingSM) {
             Text("APPLE HEALTH")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(AppTheme.textTertiary)
