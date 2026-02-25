@@ -183,7 +183,7 @@ struct AddCustomExerciseView: View {
                         Text("Search exercises & auto-detect muscles")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                         Spacer()
-                        Text("Offline")
+                        Text("Local")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                             .foregroundColor(AppTheme.success)
                             .padding(.horizontal, 6)
@@ -236,9 +236,14 @@ struct AddCustomExerciseView: View {
             }
         }
         .task {
-            // Check if cache exists on disk already (no API call)
+            // Check if cache exists on disk and load it into memory
             let hasCache = await ExerciseAPIService.shared.hasCacheOnDisk
             if hasCache {
+                do {
+                    try await ExerciseAPIService.shared.ensureCache()
+                } catch {
+                    return
+                }
                 cacheReady = true
             }
         }
@@ -547,6 +552,15 @@ struct AddCustomExerciseView: View {
         apiError = nil
 
         Task {
+            do {
+                try await ExerciseAPIService.shared.ensureCache()
+            } catch {
+                await MainActor.run {
+                    apiError = "Could not load exercise database. Try downloading again."
+                }
+                return
+            }
+
             let results = await ExerciseAPIService.shared.searchLocal(keyword: name)
             await MainActor.run {
                 let limited = Array(results.prefix(20))
